@@ -35,6 +35,7 @@ function mobileError(input: string): string {
 
 export default function LoginPage() {
   const codeRefs = useRef<Array<HTMLInputElement | null>>([]);
+  const busy = useRef(false);
   const [step, setStep] = useState<Step>("mobile");
   const [mobile, setMobile] = useState("");
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
@@ -123,18 +124,20 @@ export default function LoginPage() {
     }
   }
 
-  async function verify(event: FormEvent) {
-    event.preventDefault();
-    if (!normalized || code.length !== 6) {
-      setFieldError(code.length !== 6 ? "Enter the 6-digit code." : "Enter a valid mobile number, for example +966 5X XXX XXXX.");
+  async function verifyCode(nextCode: string) {
+    const entered = nextCode.trim();
+    if (busy.current) return;
+    if (!normalized || entered.length !== 6) {
+      setFieldError(entered.length !== 6 ? "Enter the 6-digit code." : "Enter a valid mobile number, for example +966 5X XXX XXXX.");
       setFormError("");
       return;
     }
+    busy.current = true;
     setPending("verify");
     resetMessages();
     let signedInNow = false;
     try {
-      await api("/auth/otp/verify", { method: "POST", body: { mobile: normalized, code } });
+      await api("/auth/otp/verify", { method: "POST", body: { mobile: normalized, code: entered } });
       signedInNow = true;
       setSignedIn(true);
       setNotice("Signed in. Opening your vehicle page.");
@@ -144,8 +147,16 @@ export default function LoginPage() {
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "The code was not accepted. Try again.");
     } finally {
-      if (!signedInNow) setPending(null);
+      if (!signedInNow) {
+        busy.current = false;
+        setPending(null);
+      }
     }
+  }
+
+  function verify(event: FormEvent) {
+    event.preventDefault();
+    void verifyCode(code);
   }
 
   return (
@@ -244,10 +255,14 @@ export default function LoginPage() {
                 <p className="mt-1">Use this code for any mobile number. It works only in this development environment.</p>
                 <button
                   type="button"
-                  className="mt-2 font-medium text-ink underline"
-                  onClick={() => applyCode(devCode)}
+                  className="mt-2 font-medium text-ink underline disabled:cursor-not-allowed disabled:text-muted"
+                  disabled={pending !== null}
+                  onClick={() => {
+                    applyCode(devCode);
+                    void verifyCode(devCode);
+                  }}
                 >
-                  Use demo code
+                  Sign in with demo code
                 </button>
               </div>
             ) : null}
