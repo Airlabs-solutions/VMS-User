@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const apiOrigin = process.env.API_ORIGIN ?? "https://vms-backend-1rnk.onrender.com";
+const apiOrigin = (process.env.API_ORIGIN ?? "https://vms-backend-1rnk.onrender.com").replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   async rewrites() {
