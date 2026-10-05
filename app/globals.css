@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+.driver-main {
+  width: 100%;
+  flex: 1;
+  padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+
+.driver-tabbar {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.driver-more-sheet {
+  bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  animation: sheet-up 220ms ease-out;
+}
+
+.page-enter {
+  animation: rise 220ms ease-out;
+}
+
+.login-card {
+  animation: rise 280ms ease-out;
+}
+
+.notice-in {
+  animation: rise 180ms ease-out;
+}
+
+.driver-drawer {
+  animation: drawer-in 240ms ease-out;
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-12px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .driver-main {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .driver-main {
+    padding: 2rem 2.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
