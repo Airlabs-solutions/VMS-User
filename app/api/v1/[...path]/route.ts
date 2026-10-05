@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const apiOrigin = (process.env.API_ORIGIN ?? "https://vms-backend-1rnk.onrender.com").replace(/\/+$/, "");
+const apiOrigin = "https://vms-backend-1rnk.onrender.com";
 
 const forwardedHeaders = ["accept", "content-type", "cookie", "x-csrf-token", "x-vms-app"];
 
