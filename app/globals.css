@@ -26,9 +26,10 @@ textarea:focus-visible {
 }
 
 .driver-main {
-  width: 100%;
+  width: min(100%, 72rem);
+  margin-inline: auto;
   flex: 1;
-  padding: 1.25rem 1rem calc(5rem + env(safe-area-inset-bottom, 0px));
+  padding: 1.25rem 1rem calc(5.5rem + env(safe-area-inset-bottom, 0px));
 }
 
 .driver-tabbar {

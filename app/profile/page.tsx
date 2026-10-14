@@ -6,18 +6,9 @@ import { StatusBadge } from "../../components/StatusBadge";
 import { Notice, PageHeader, Panel, PrimaryButton, SecondaryButton, Skeleton, TextInput } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
 import { formatDate } from "../../lib/format";
+import { loadProfile, rememberProfile, type DriverProfile } from "../../lib/profile";
 
-type Status = { code: string; label: string };
-type Profile = {
-  name: string;
-  mobile: string | null;
-  driverId: string;
-  licenseNumber: string | null;
-  licenseType: Status;
-  licenseExpiry: string | null;
-  licenseStatus: Status;
-  photoUrl: string | null;
-};
+type Profile = DriverProfile;
 
 function initials(name: string) {
   return name
@@ -41,11 +32,11 @@ export default function ProfilePage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    api<{ data: Profile }>("/me/profile")
+    loadProfile()
       .then((result) => {
-        setProfile(result.data);
-        setName(result.data.name);
-        setMobile(result.data.mobile ?? "");
+        setProfile(result);
+        setName(result.name);
+        setMobile(result.mobile ?? "");
       })
       .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Could not load your profile"))
       .finally(() => setLoading(false));
@@ -75,15 +66,16 @@ export default function ProfilePage() {
         const form = new FormData();
         form.append("file", photo);
         const uploaded = await api<{ data: Profile }>("/me/photo", { method: "POST", form });
-        setProfile(uploaded.data);
+        setProfile(rememberProfile(uploaded.data));
       }
       const result = await api<{ data: Profile }>("/me/profile", {
         method: "PATCH",
         body: { name: name.trim(), mobile: mobile.trim() },
       });
-      setProfile(result.data);
-      setName(result.data.name);
-      setMobile(result.data.mobile ?? "");
+      const saved = rememberProfile(result.data);
+      setProfile(saved);
+      setName(saved.name);
+      setMobile(saved.mobile ?? "");
       setPhoto(null);
       setEditing(false);
       setNotice("Profile updated.");
@@ -115,9 +107,9 @@ export default function ProfilePage() {
           <Panel className="lg:col-span-1">
             <div className="flex flex-col items-start gap-4 sm:flex-row lg:flex-col">
               {shownPhoto ? (
-                <img src={shownPhoto} alt="" className="h-20 w-20 rounded-md object-cover" />
+                <img src={shownPhoto} alt="" loading="lazy" decoding="async" className="h-20 w-20 rounded-md object-cover" />
               ) : (
-                <span className="grid h-20 w-20 place-items-center rounded-md bg-brand text-lg font-semibold text-white">{initials(profile.name) || "DR"}</span>
+                <span className="grid h-20 w-20 place-items-center rounded-md bg-brand text-lg font-semibold text-ink">{initials(profile.name) || "DR"}</span>
               )}
               <div>
                 <p className="text-lg font-semibold text-ink">{profile.name}</p>
@@ -125,7 +117,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </Panel>
-          <Panel title="License details" className="lg:col-span-2" extra={<StatusBadge code={profile.licenseStatus.code} label={profile.licenseStatus.label} />}>
+          <Panel title="License details" className="lg:col-span-2" extra={<StatusBadge code={profile.licenseStatus?.code} label={profile.licenseStatus?.label ?? "Not recorded"} />}>
             <dl className="grid gap-4 sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-muted">Driver ID</dt>
@@ -141,11 +133,23 @@ export default function ProfilePage() {
               </div>
               <div>
                 <dt className="text-xs text-muted">License type</dt>
-                <dd className="mt-1 text-sm font-semibold text-ink">{profile.licenseType.label}</dd>
+                <dd className="mt-1 text-sm font-semibold text-ink">{profile.licenseType?.label || "Not recorded"}</dd>
               </div>
               <div>
                 <dt className="text-xs text-muted">License expiry</dt>
                 <dd className="mt-1 text-sm font-semibold text-ink">{formatDate(profile.licenseExpiry)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Iqama number</dt>
+                <dd className="mt-1 text-sm font-semibold text-ink">{profile.iqamaNumber || "Not recorded"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Iqama expiry</dt>
+                <dd className="mt-1 text-sm font-semibold text-ink">{formatDate(profile.iqamaExpiry)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted">Profile</dt>
+                <dd className="mt-1 text-sm font-semibold text-ink">{profile.verified ? "Verified" : "Not verified"}</dd>
               </div>
             </dl>
           </Panel>
@@ -157,9 +161,9 @@ export default function ProfilePage() {
           <Panel title="Profile photo">
             <div className="flex items-center gap-4">
               {shownPhoto ? (
-                <img src={shownPhoto} alt="" className="h-20 w-20 rounded-md object-cover" />
+                <img src={shownPhoto} alt="" loading="lazy" decoding="async" className="h-20 w-20 rounded-md object-cover" />
               ) : (
-                <span className="grid h-20 w-20 place-items-center rounded-md bg-brand text-lg font-semibold text-white">{initials(name) || "DR"}</span>
+                <span className="grid h-20 w-20 place-items-center rounded-md bg-brand text-lg font-semibold text-ink">{initials(name) || "DR"}</span>
               )}
               <label className="text-sm">
                 <span className="mb-1.5 block font-medium">Choose a photo</span>

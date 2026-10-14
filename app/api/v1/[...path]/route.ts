@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const apiOrigin = "https://vms-backend-1rnk.onrender.com";
+const apiOrigin = process.env.API_ORIGIN
+  ?? (process.env.NODE_ENV === "development" ? "http://localhost:5000" : "https://vms-backend-1rnk.onrender.com");
 
-const forwardedHeaders = ["accept", "content-type", "cookie", "x-csrf-token", "x-vms-app"];
+const forwardedHeaders = ["accept", "content-type", "cookie", "range", "x-csrf-token", "x-vms-app"];
+const responseHeaders = ["content-type", "content-length", "content-range", "accept-ranges", "content-disposition"];
 
 async function proxy(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
@@ -31,9 +33,15 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     return NextResponse.json({ error: { message: "The server is unavailable. Try again." } }, { status: 502 });
   }
 
+  const outgoing = new Headers();
+  for (const name of responseHeaders) {
+    const value = upstream.headers.get(name);
+    if (value) outgoing.set(name, value);
+  }
+  if (!outgoing.has("content-type")) outgoing.set("content-type", "application/json");
   const response = new NextResponse(upstream.body, {
     status: upstream.status,
-    headers: { "content-type": upstream.headers.get("content-type") ?? "application/json" },
+    headers: outgoing,
   });
   for (const cookie of upstream.headers.getSetCookie()) {
     response.headers.append("set-cookie", cookie);

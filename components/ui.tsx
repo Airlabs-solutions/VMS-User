@@ -14,7 +14,7 @@ export function PageHeader({ title, description, action }: { title: string; desc
 
 export function Panel({ title, extra, children, className = "" }: { title?: string; extra?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`overflow-hidden rounded-lg border border-line bg-card shadow-[0_1px_2px_rgba(28,36,52,0.05)] ${className}`}>
+    <section className={`overflow-hidden rounded-lg border border-line bg-card shadow-[0_1px_2px_rgba(17,22,16,0.04)] ${className}`}>
       {title ? (
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 sm:px-5">
           <h2 className="text-sm font-semibold text-ink">{title}</h2>
@@ -45,14 +45,14 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className={`h-10 w-full rounded-md border border-line bg-card px-3 text-sm text-ink transition duration-150 ease-out outline-none placeholder:text-muted hover:border-brand-mid focus:border-brand focus:ring-2 focus:ring-brand/15 ${props.className ?? ""}`}
+      className={`h-10 w-full rounded-md border border-line bg-card px-3 text-sm text-ink transition duration-150 ease-out outline-none placeholder:text-muted hover:border-brand focus:border-brand focus:ring-2 focus:ring-brand/25 ${props.className ?? ""}`}
     />
   );
 }
 
 export function PrimaryButton({ children, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button {...props} className={`inline-flex h-10 items-center justify-center rounded-md bg-brand px-4 text-sm font-medium text-white transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60 ${className}`}>
+    <button {...props} className={`inline-flex h-10 items-center justify-center rounded-md bg-brand px-4 text-sm font-medium text-ink transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-mid disabled:cursor-not-allowed disabled:opacity-60 ${className}`}>
       {children}
     </button>
   );
@@ -60,7 +60,7 @@ export function PrimaryButton({ children, className = "", ...props }: React.Butt
 
 export function SecondaryButton({ children, className = "", ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button {...props} className={`inline-flex h-10 items-center justify-center rounded-md border border-line bg-card px-4 text-sm font-medium text-ink transition duration-150 ease-out hover:border-brand-mid hover:bg-canvas disabled:cursor-not-allowed disabled:opacity-60 ${className}`}>
+    <button {...props} className={`inline-flex h-10 items-center justify-center rounded-md border border-line bg-card px-4 text-sm font-medium text-ink transition duration-150 ease-out hover:border-brand hover:bg-brand-soft disabled:cursor-not-allowed disabled:opacity-60 ${className}`}>
       {children}
     </button>
   );

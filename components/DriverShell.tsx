@@ -3,8 +3,9 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { api } from "../lib/api";
+import { clearProfile, loadProfile } from "../lib/profile";
 
 type IconName = "home" | "messages" | "documents" | "violations" | "fuel" | "trip" | "profile" | "more";
 
@@ -68,12 +69,15 @@ function initials(name: string) {
     .join("");
 }
 
-export function DriverShell({ children }: { children: ReactNode }) {
+export function DriverShell({ children, bleed = false }: { children: ReactNode; bleed?: boolean }) {
   const path = usePathname();
+  const router = useRouter();
   const [moreOpen, setMoreOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [unread, setUnread] = useState(0);
   const [profile, setProfile] = useState<ShellProfile | null>(null);
+  const [ready, setReady] = useState(false);
+  const [verified, setVerified] = useState(false);
   const current = flatLinks.find((item) => item.href === path);
 
   useEffect(() => {
@@ -115,6 +119,31 @@ export function DriverShell({ children }: { children: ReactNode }) {
   }, [moreOpen]);
 
   useEffect(() => {
+    let active = true;
+    loadProfile()
+      .then((result) => {
+        if (!active) return;
+        setProfile(result);
+        setVerified(result.verified || result.complete);
+        setReady(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setReady(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
+    if (!verified && path !== "/profile/complete") router.replace("/profile/complete");
+    if (verified && path === "/profile/complete") router.replace("/my-vehicle");
+  }, [ready, verified, path, router]);
+
+  useEffect(() => {
+    if (!verified) return;
     if (path === "/messages") {
       setUnread(0);
       return;
@@ -122,27 +151,48 @@ export function DriverShell({ children }: { children: ReactNode }) {
     api<{ data: { unread: number } }>("/me/messages/unread")
       .then((result) => setUnread(result.data.unread))
       .catch(() => setUnread(0));
-  }, [path]);
-
-  useEffect(() => {
-    api<{ data: ShellProfile }>("/me/profile")
-      .then((result) => setProfile(result.data))
-      .catch(() => setProfile(null));
-  }, [path]);
+  }, [path, verified]);
 
   function signOut() {
+    clearProfile();
     void api("/auth/logout", { method: "POST" }).finally(() => {
       window.location.href = "/login";
     });
   }
 
   const moreActive = moreOpen || morePaths.has(path);
+  const waiting = !ready || (!verified && path !== "/profile/complete") || (verified && path === "/profile/complete");
+
+  if (waiting) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-canvas px-4">
+        <p className="text-sm text-muted">Loading your account...</p>
+      </div>
+    );
+  }
+
+  if (!verified) {
+    return (
+      <div className="min-h-screen bg-canvas">
+        <header className="flex h-14 items-center justify-between border-b border-line bg-card px-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-md bg-brand text-xs font-semibold text-ink">VMS</span>
+            <p className="text-sm font-semibold text-ink">Complete your profile</p>
+          </div>
+          <button type="button" className="h-10 rounded-md border border-line px-3 text-sm font-medium text-ink hover:bg-brand-soft" onClick={signOut}>
+            Sign out
+          </button>
+        </header>
+        <main className="driver-main">{children}</main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-canvas lg:flex lg:h-screen lg:overflow-hidden">
       <aside className={`hidden lg:flex lg:h-screen lg:shrink-0 lg:flex-col lg:border-r lg:border-line lg:bg-card lg:transition-[width] lg:duration-300 lg:ease-out ${collapsed ? "lg:w-[76px]" : "lg:w-[248px]"}`}>
         <div className="flex h-16 items-center gap-3 border-b border-line px-4">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand text-xs font-semibold text-white">VMS</span>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-brand text-xs font-semibold text-ink">VMS</span>
           {collapsed ? null : (
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-ink">Vehicle Management</p>
@@ -152,7 +202,7 @@ export function DriverShell({ children }: { children: ReactNode }) {
         </div>
         <SideNav path={path} unread={unread} collapsed={collapsed} />
         <div className="border-t border-line p-3">
-          <Link href="/profile" title={profile?.name || "Profile"} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-canvas">
+          <Link href="/profile" title={profile?.name || "Profile"} className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-brand-soft">
             <AccountMark profile={profile} />
             {collapsed ? null : (
               <span className="min-w-0">
@@ -163,14 +213,14 @@ export function DriverShell({ children }: { children: ReactNode }) {
           </Link>
           <button
             type="button"
-            className="mt-2 h-10 w-full rounded-md border border-line bg-card px-3 text-sm font-medium text-ink transition duration-150 ease-out hover:bg-canvas"
+            className="mt-2 h-10 w-full rounded-md border border-line bg-card px-3 text-sm font-medium text-ink transition duration-150 ease-out hover:border-brand hover:bg-brand-soft"
             onClick={signOut}
           >
             {collapsed ? "Out" : "Sign out"}
           </button>
           <button
             type="button"
-            className="mt-2 hidden h-10 w-full rounded-md text-sm font-medium text-muted hover:bg-canvas lg:inline-flex lg:items-center lg:justify-center"
+            className="mt-2 hidden h-10 w-full rounded-md text-sm font-medium text-muted hover:bg-brand-soft hover:text-ink lg:inline-flex lg:items-center lg:justify-center"
             aria-pressed={collapsed}
             onClick={toggleCollapsed}
           >
@@ -190,9 +240,16 @@ export function DriverShell({ children }: { children: ReactNode }) {
           >
             <MenuIcon />
           </button>
-          <p className="min-w-0 truncate text-sm font-semibold text-ink">{current?.label ?? "Driver portal"}</p>
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{current?.label ?? "Driver portal"}</p>
+          <button
+            type="button"
+            className="h-10 shrink-0 rounded-md border border-line bg-card px-3 text-sm font-medium text-ink hover:border-brand hover:bg-brand-soft lg:hidden"
+            onClick={signOut}
+          >
+            Sign out
+          </button>
         </header>
-        <main key={path} className="driver-main page-enter">{children}</main>
+        <main key={path} className={bleed ? "page-enter flex h-[calc(100dvh-3.5rem)] min-h-0 flex-col overflow-hidden pb-[calc(3.5rem+env(safe-area-inset-bottom,0px))] lg:pb-0" : "driver-main page-enter"}>{children}</main>
       </div>
 
       {moreOpen ? (
@@ -204,10 +261,10 @@ export function DriverShell({ children }: { children: ReactNode }) {
         />
       ) : null}
       {moreOpen ? (
-        <aside className="driver-drawer fixed inset-y-0 left-0 z-50 flex w-[min(100%,280px)] flex-col border-r border-line bg-card shadow-[0_8px_24px_rgba(28,36,52,0.12)] lg:hidden" role="dialog" aria-label="Menu">
+        <aside className="driver-drawer fixed inset-y-0 left-0 z-[60] flex w-[min(100%,280px)] flex-col border-r border-line bg-card pb-[calc(4.5rem+env(safe-area-inset-bottom,0px))] shadow-[0_8px_24px_rgba(17,22,16,0.12)] lg:hidden lg:pb-0" role="dialog" aria-label="Menu">
           <div className="flex h-14 items-center justify-between border-b border-line px-4">
             <span className="text-sm font-semibold text-ink">Menu</span>
-            <button type="button" className="h-10 rounded-md px-3 text-sm font-medium text-brand" onClick={() => setMoreOpen(false)}>
+            <button type="button" className="h-10 rounded-md px-3 text-sm font-medium text-brand-deep" onClick={() => setMoreOpen(false)}>
               Close
             </button>
           </div>
@@ -229,13 +286,13 @@ export function DriverShell({ children }: { children: ReactNode }) {
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative flex h-full w-full flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-none whitespace-nowrap transition-colors duration-150 ${active ? "font-semibold text-brand" : "font-medium text-muted"}`}
+                  className={`relative flex h-full w-full flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-none whitespace-nowrap transition-colors duration-150 ${active ? "font-semibold text-ink" : "font-medium text-muted"}`}
                 >
                   {active ? <span className="absolute inset-x-3 top-0 h-0.5 rounded-b-md bg-brand" /> : null}
                   <span className="relative">
                     <NavIcon name={item.icon} className="h-[22px] w-[22px]" />
                     {item.href === "/messages" && unread > 0 ? (
-                      <span className="absolute -top-1.5 -right-2 min-w-4 rounded-md bg-highlight px-1 text-center text-[10px] leading-4 font-semibold text-[#1c2434]">
+                      <span className="absolute -top-1.5 -right-2 min-w-4 rounded-md bg-highlight px-1 text-center text-[10px] leading-4 font-semibold text-ink">
                         {unread > 9 ? "9+" : unread}
                       </span>
                     ) : null}
@@ -250,7 +307,7 @@ export function DriverShell({ children }: { children: ReactNode }) {
               type="button"
               aria-expanded={moreOpen}
               aria-current={moreActive ? "page" : undefined}
-              className={`relative flex h-full w-full flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-none whitespace-nowrap transition-colors duration-150 ${moreActive ? "font-semibold text-brand" : "font-medium text-muted"}`}
+              className={`relative flex h-full w-full flex-col items-center justify-center gap-1 px-0.5 text-[11px] leading-none whitespace-nowrap transition-colors duration-150 ${moreActive ? "font-semibold text-ink" : "font-medium text-muted"}`}
               onClick={() => setMoreOpen(true)}
             >
               {moreActive ? <span className="absolute inset-x-3 top-0 h-0.5 rounded-b-md bg-brand" /> : null}
@@ -279,12 +336,12 @@ function SideNav({ path, unread, collapsed }: { path: string; unread: number; co
                     href={item.href}
                     title={item.label}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition duration-150 ease-out ${active ? "bg-brand/10 font-medium text-brand" : "text-ink hover:bg-canvas"}`}
+                    className={`flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition duration-150 ease-out ${active ? "bg-brand-soft font-medium text-ink shadow-[inset_3px_0_0_#a8d95b]" : "text-ink hover:bg-brand-soft"}`}
                   >
                     <NavIcon name={item.icon} />
                     {collapsed ? null : <span className="min-w-0 flex-1">{item.label}</span>}
                     {!collapsed && item.href === "/messages" && unread > 0 ? (
-                      <span className="rounded-md bg-highlight px-1.5 py-0.5 text-xs font-semibold text-[#1c2434]">{unread}</span>
+                      <span className="rounded-md bg-highlight px-1.5 py-0.5 text-xs font-semibold text-ink">{unread}</span>
                     ) : null}
                   </Link>
                 </li>
@@ -307,10 +364,10 @@ function MenuIcon() {
 
 function AccountMark({ profile }: { profile: ShellProfile | null }) {
   if (profile?.photoUrl) {
-    return <img src={profile.photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />;
+    return <img src={profile.photoUrl} alt="" loading="lazy" decoding="async" className="h-10 w-10 shrink-0 rounded-md object-cover" />;
   }
   return (
-    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-brand text-xs font-semibold text-white">
+    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-brand text-xs font-semibold text-ink">
       {initials(profile?.name ?? "") || "DR"}
     </span>
   );

@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../../lib/api";
+import { loadProfile } from "../../lib/profile";
 
 type Step = "mobile" | "code";
 
@@ -138,11 +139,13 @@ export default function LoginPage() {
     let signedInNow = false;
     try {
       await api("/auth/otp/verify", { method: "POST", body: { mobile: normalized, code: entered } });
+      const profile = await loadProfile(true);
       signedInNow = true;
       setSignedIn(true);
-      setNotice("Signed in. Opening your vehicle page.");
+      const next = profile.verified || profile.complete ? "/my-vehicle" : "/profile/complete";
+      setNotice(profile.verified || profile.complete ? "Signed in. Opening your vehicle page." : "Signed in. Opening your profile.");
       window.setTimeout(() => {
-        window.location.assign("/my-vehicle");
+        window.location.assign(next);
       }, 400);
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "The code was not accepted. Try again.");
@@ -160,23 +163,24 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-screen place-items-center bg-canvas px-4 py-8 sm:px-6">
-      <section className="login-card w-full max-w-[440px] rounded-lg border border-line bg-card px-5 py-7 shadow-[0_1px_2px_rgba(28,36,52,0.06),0_16px_40px_rgba(28,36,52,0.06)] sm:px-8 sm:py-8">
-        <div>
-          <span className="grid h-10 w-10 place-items-center rounded-md bg-brand text-sm font-semibold text-white">VMS</span>
-          <p className="mt-5 text-xs font-medium tracking-wide text-brand uppercase">Vehicle Management System</p>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink">Welcome</h1>
-          <p className="mt-1 text-sm leading-6 text-muted">Sign in with your mobile number to open your assigned vehicle.</p>
+    <main className="grid min-h-screen place-items-center bg-brand-soft px-4 py-8 sm:px-6">
+      <section className="login-card w-full max-w-[440px] overflow-hidden rounded-lg border border-line bg-card shadow-[0_1px_2px_rgba(17,22,16,0.04),0_16px_40px_rgba(17,22,16,0.06)]">
+        <div className="bg-brand px-5 py-6 sm:px-8">
+          <span className="grid h-10 w-10 place-items-center rounded-md bg-card text-sm font-semibold text-ink">VMS</span>
+          <p className="mt-4 text-xs font-medium tracking-wide text-ink/70 uppercase">Vehicle Management System</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">Welcome</h1>
+          <p className="mt-1 text-sm leading-6 text-ink/80">Sign in with your mobile number to open your assigned vehicle.</p>
         </div>
+        <div className="px-5 py-6 sm:px-8 sm:py-7">
 
-        <ol className="mt-6 grid grid-cols-2 gap-3" aria-label="Sign-in steps">
+        <ol className="grid grid-cols-2 gap-3" aria-label="Sign-in steps">
           <StepItem index={1} label="Phone number" active={step === "mobile"} done={step === "code" || signedIn} />
           <StepItem index={2} label="OTP verification" active={step === "code" || signedIn} done={signedIn} />
         </ol>
 
         {signedIn ? (
           <p role="status" className="mt-6 rounded-md border border-status-ok bg-status-ok-bg px-3 py-3 text-sm text-status-ok">
-            Signed in. Opening your vehicle page.
+            {notice || "Signed in."}
           </p>
         ) : step === "mobile" ? (
           <form onSubmit={requestCode} className="mt-6" noValidate>
@@ -197,7 +201,7 @@ export default function LoginPage() {
                 placeholder="+966 5X XXX XXXX"
                 aria-invalid={fieldError ? true : undefined}
                 aria-describedby={fieldError ? "mobile-error" : "mobile-hint"}
-                className={`w-full rounded-md border bg-card px-3 py-2.5 ${fieldError ? "border-status-danger" : "border-line"}`}
+                className={`h-12 w-full rounded-md border bg-card px-3 text-base outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 ${fieldError ? "border-status-danger" : "border-line"}`}
                 value={mobile}
                 onChange={(event) => {
                   setMobile(event.target.value);
@@ -213,7 +217,7 @@ export default function LoginPage() {
             )}
             {formError ? <Alert tone="danger">{formError}</Alert> : null}
             <button
-              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-sm font-medium text-white transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-sm font-medium text-ink transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-mid disabled:cursor-not-allowed disabled:opacity-60"
               disabled={pending !== null}
             >
               {pending === "send" ? <Spinner /> : null}
@@ -242,7 +246,7 @@ export default function LoginPage() {
                   autoComplete={index === 0 ? "one-time-code" : "off"}
                   aria-label={`Digit ${index + 1}`}
                   aria-invalid={fieldError ? true : undefined}
-                  className={`h-12 rounded-md border bg-card text-center text-lg font-semibold ${fieldError ? "border-status-danger" : "border-line"}`}
+                  className={`h-12 rounded-md border bg-card text-center text-lg font-semibold outline-none focus:border-brand focus:ring-2 focus:ring-brand/25 ${fieldError ? "border-status-danger" : "border-line"}`}
                   disabled={pending !== null}
                 />
               ))}
@@ -271,7 +275,7 @@ export default function LoginPage() {
             {formError ? <Alert tone="danger">{formError}</Alert> : null}
 
             <button
-              className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-sm font-medium text-white transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-deep disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-brand px-3 text-sm font-medium text-ink transition duration-150 ease-out hover:bg-brand-strong active:bg-brand-mid disabled:cursor-not-allowed disabled:opacity-60"
               disabled={pending !== null}
             >
               {pending === "verify" ? <Spinner /> : null}
@@ -281,7 +285,7 @@ export default function LoginPage() {
             <div className="mt-4 flex items-center justify-between gap-3 text-sm">
               <button
                 type="button"
-                className="font-medium text-accent disabled:cursor-not-allowed disabled:text-muted"
+                className="font-medium text-brand-deep disabled:cursor-not-allowed disabled:text-muted"
                 disabled={pending !== null}
                 onClick={() => {
                   setStep("mobile");
@@ -294,7 +298,7 @@ export default function LoginPage() {
               </button>
               <button
                 type="button"
-                className="font-medium text-accent disabled:cursor-not-allowed disabled:text-muted"
+                className="font-medium text-brand-deep disabled:cursor-not-allowed disabled:text-muted"
                 disabled={pending !== null || resendIn > 0}
                 onClick={() => {
                   void requestCode();
@@ -305,6 +309,7 @@ export default function LoginPage() {
             </div>
           </form>
         )}
+        </div>
       </section>
     </main>
   );
@@ -314,10 +319,10 @@ function StepItem({ index, label, active, done }: { index: number; label: string
   const on = active || done;
   return (
     <li className="flex items-center gap-2" aria-current={active && !done ? "step" : undefined}>
-      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md text-xs font-semibold ${on ? "bg-brand text-white" : "border border-line bg-canvas text-muted"}`}>
+      <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-md text-xs font-semibold ${on ? "bg-brand text-ink" : "border border-line bg-brand-soft text-muted"}`}>
         {index}
       </span>
-      <span className={`text-sm ${on ? "font-medium" : "text-muted"}`}>{label}</span>
+      <span className={`min-w-0 text-sm leading-5 ${on ? "font-medium" : "text-muted"}`}>{label}</span>
     </li>
   );
 }
@@ -336,5 +341,5 @@ function Alert({ tone, children }: { tone: "ok" | "danger" | "muted"; children: 
 }
 
 function Spinner() {
-  return <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />;
+  return <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" aria-hidden="true" />;
 }

@@ -27,8 +27,8 @@ export default function ViolationsPage() {
       {rows === null ? <Skeleton className="h-40" /> : null}
       {rows?.length === 0 ? <Panel><p className="text-sm text-muted">No Saher violations on your record.</p></Panel> : null}
       {rows && rows.length > 0 ? (
-        <div className="overflow-hidden rounded-lg border border-line bg-card shadow-[0_1px_2px_rgba(28,36,52,0.05)]">
-          <div className="hidden grid-cols-5 gap-4 border-b border-line bg-canvas px-4 py-3 text-xs font-semibold text-muted sm:grid sm:px-5">
+        <div className="overflow-hidden rounded-lg border border-line bg-card shadow-[0_1px_2px_rgba(17,22,16,0.04)]">
+          <div className="hidden grid-cols-5 gap-4 border-b border-line bg-brand-soft px-4 py-3 text-xs font-semibold tracking-wide text-brand-deep uppercase sm:grid sm:px-5">
             <span>Number</span>
             <span>Date</span>
             <span>Type</span>
